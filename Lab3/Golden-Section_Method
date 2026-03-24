@@ -1,0 +1,78 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1. Ֆունկցիայի սահմանում f(x) = x^2 - 4ln(x) - 2
+def i_func(x):
+    return x**2 - 4 * np.log(x) - 2
+
+# 2. Տվյալների սահմանում
+a, b = 0.5, 3
+epsilon = 0.5
+t = 0.618  # Ոսկե հատման հաստատունը
+
+history_points_x = []
+history_points_y = []
+
+curr_a, curr_b = a, b
+
+# Սկզբնական x1 և x2
+x1 = curr_b - t * (curr_b - curr_a)
+x2 = curr_a + t * (curr_b - curr_a)
+f1, f2 = i_func(x1), i_func(x2)
+
+print(f"{'Քայլ':<5} | {'a':<8} | {'b':<8} | {'b-a':<8} | {'x1':<8} | {'x2':<8}")
+print("-" * 65)
+
+# 3. Golden Section մեթոդ
+step = 0
+while (curr_b - curr_a) >= epsilon:
+    step += 1
+
+    history_points_x.extend([x1, x2])
+    history_points_y.extend([f1, f2])
+
+    print(f"{step:<5} | {curr_a:<8.4f} | {curr_b:<8.4f} | {curr_b - curr_a:<8.4f} | {x1:<8.3f} | {x2:<8.3f}")
+
+    if f1 <= f2:
+        curr_b = x2
+        x2 = x1
+        f2 = f1
+        x1 = curr_b - t * (curr_b - curr_a)
+        f1 = i_func(x1)
+    else:
+        curr_a = x1
+        x1 = x2
+        f1 = f2
+        x2 = curr_a + t * (curr_b - curr_a)
+        f2 = i_func(x2)
+
+# 4. Վերջնական քայլ
+step += 1
+print(f"{step:<5} | {curr_a:<8.4f} | {curr_b:<8.4f} | {curr_b - curr_a:<8.4f} | {'-':<8} | {'-':<8}")
+
+x_star = (curr_a + curr_b) / 2
+
+# 5. Գրաֆիկ
+x_plot = np.linspace(0.5, 3.5, 1000)
+y_plot = i_func(x_plot)
+
+plt.figure(figsize=(10, 6))
+plt.plot(x_plot, y_plot, color='black', alpha=0.3, label='f(x) = x^2 - 4ln(x) - 2')
+
+plt.scatter(history_points_x, history_points_y, color='blue', s=40, label='Փորձնական կետեր')
+
+plt.scatter(x_star, i_func(x_star), color='red', s=150,
+            marker='*', label=f'x* ≈ {x_star:.3f}', zorder=10)
+
+# Մասշտաբ
+plt.axis([0, 4, -5, 10])
+
+plt.title(f'Ոսկե հատում (epsilon = {epsilon})')
+plt.xlabel('x')
+plt.ylabel('f(x)')
+plt.legend()
+plt.grid(True, linestyle=':', alpha=0.4)
+plt.show()
+
+print("-" * 65)
+print(f"Արդյունք: x* ≈ {x_star:.4f}, f(x*) ≈ {i_func(x_star):.4f}")
