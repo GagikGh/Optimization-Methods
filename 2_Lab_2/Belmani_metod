@@ -1,0 +1,106 @@
+from __future__ import annotations
+
+import os
+import shutil
+import sys
+
+class ContractOptimization:
+    def __init__(self, payoffs: list[int], probabilities: list[float], total_periods: int):
+        self.W = payoffs
+        self.P = probabilities
+        self.T = total_periods
+        self.terminal_width = self._get_terminal_size()
+
+    def _get_terminal_size(self) -> int:
+        """Որոշում է էկրանի առավելագույն տպագրման լայնությունը:"""
+        return max(40, min(shutil.get_terminal_size(fallback=(85, 24)).columns, 90))
+
+    def _color(self, ansi_code: str, text: str) -> str:
+        """Կիրառում է ANSI գունային ձևավորում տեքստի համար:"""
+        if not sys.stdout.isatty() or os.environ.get("NO_COLOR"):
+            return text
+        return f"\033[{ansi_code}m{text}\033[0m"
+
+    def _draw_line(self, symbol: str = "═", label: str | None = None) -> str:
+        """Ստեղծում է տեսողական բաժանարար գիծ տերմինալի համար:"""
+        if not label:
+            return symbol * self.terminal_width
+        side_len = max(0, (self.terminal_width - len(label) - 2) // 2)
+        return f"{symbol * side_len} {label} {symbol * (self.terminal_width - len(label) - 2 - side_len)}"
+
+    def _format_num(self, val: float | int) -> float | int:
+        """Կլորացնում է կոտորակները կամ վերադարձնում ամբողջ թիվ:"""
+        return int(val) if val == int(val) else round(val, 4)
+
+    def _display_summary(self, period: int, value_dict: dict[float, float]) -> None:
+        """Արտածում է արդյունքները ժամանակակից սլաքներով ձևաչափով:"""
+        print(self._color("2", f"  ➔ Փուլի արդյունքները [V_{period}(w)]`"))
+        for w in sorted(value_dict.keys()):
+            val_str = str(self._format_num(value_dict[w]))
+            print(f"     w = {w:<2} ➔ {self._color('1;37', val_str):<8}")
+        print()
+
+    def run_optimization(self) -> dict[float, float]:
+        # Եզրափակիչ քայլ (t = T)
+        current_V = {w: float(w) for w in self.W}
+        print(self._color("1;33", self._draw_line("─", f" Վերջին քայլ t = {self.T} ")))
+        print(self._color("2", f"  * Սպասելու հնարավորություն չկա: V_{self.T}(w) = max(w, 0)"))
+        self._display_summary(self.T, current_V)
+
+        # Հետադարձ ինդուկցիայի ցիկլ
+        for t in range(self.T - 1, 0, -1):
+            print(self._color("1;33", self._draw_line("─", f"t = {t} ")))
+            
+            expected_value = 0.0
+            formula_steps = []
+
+            for idx, w in enumerate(self.W):
+                prob = self.P[idx]
+                next_val = current_V[w]
+                expected_value += next_val * prob
+                formula_steps.append(f"({self._format_num(next_val)} * {prob})")
+
+            print(self._color("1", "  • Սպասվող արժեքի (Expectation) հաշվարկ."))
+            print(f"    E[V_{t+1}] = " + " + ".join(formula_steps))
+            print(f"             = {self._color('1;32', str(self._format_num(expected_value)))}")
+
+            # Որոշման կայացում յուրաքանչյուր գնի համար
+            updated_V = {}
+            print(self._color("1", "  • Ռազմավարության ընտրություն."))
+            
+            for w in self.W:
+                updated_V[w] = max(float(w), expected_value)
+                action = "ՍՏՈՐԱԳՐԵԼ" if updated_V[w] == w else "ՍՊԱՍԵԼ"
+                color_code = "1;31" if action == "ՍՏՈՐԱԳՐԵԼ" else "1;34"
+                
+                print(
+                    f"    w = {w:<2} ➔ max({w}, {self._format_num(expected_value)}) "
+                    f"= {self._color('1;37', str(self._format_num(updated_V[w]))):<6} "
+                    f"[{self._color(color_code, action)}]"
+                )
+            print(self._color("2", "  " + "." * (self.terminal_width - 4)))
+            
+            self._display_summary(t, updated_V)
+            current_V = updated_V
+
+        # Վերջնական ամփոփում առաջին քայլի համար
+        print(f"\n  Առաջին փուլում (t=1) հաջորդ առաջարկներին սպասելու արժեքն է` {self._format_num(expected_value)}")
+        print("  Կլինիկայի օպտիմալ քայլերը սկզբնական փուլում.\n")
+        
+        for w in self.W:
+            decision = "ՍՏՈՐԱԳՐԵԼ պայմանագիրը" if current_V[w] == w else "ՄԵՐԺԵԼ և սպասել հաջորդին"
+            icon = "✓" if current_V[w] == w else "-"
+            print(f"    {icon} Եթե առաջարկվի գին w = {w} ➔ {decision}")
+            
+        print("\n" + self._color("1;36", self._draw_line("═")))
+        return current_V
+
+
+if __name__ == "__main__":
+    # Տվյալների փոխանցում
+    optimizer = ContractOptimization(
+        payoffs=[18, 24, 30], 
+        probabilities=[0.2, 0.5, 0.3], 
+        total_periods=7
+    )
+    optimizer.run_optimization()
