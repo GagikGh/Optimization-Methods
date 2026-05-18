@@ -1,0 +1,18 @@
+# Python Optimization Project
+
+This project implements an optimization algorithm using Python and NumPy.
+
+## Features
+
+- Matrix computations with NumPy
+- Gradient norm calculation
+- Iterative optimization process
+- Step-by-step iteration output
+- Convergence checking using epsilon
+
+## Requirements
+
+Install dependencies:
+
+```bash
+pip install numpy
