@@ -1,0 +1,96 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Մարկովի շղթայի վիճակների սահմանումը
+states = ['Dry', 'Low', 'Fair', 'High', 'Urgent', 'Critical']
+n_states = len(states)
+
+# Անցումային հավանականությունների մատրից
+P = np.array([
+    [0.49, 0.18, 0.15, 0.07, 0.07, 0.04],
+    [0.24, 0.44, 0.06, 0.12, 0.10, 0.04],
+    [0.10, 0.14, 0.49, 0.14, 0.05, 0.08],
+    [0.03, 0.08, 0.18, 0.57, 0.10, 0.04],
+    [0.03, 0.07, 0.09, 0.11, 0.46, 0.24],
+    [0.06, 0.03, 0.08, 0.06, 0.11, 0.66]
+])
+
+start_state = 5
+length = 500
+n_sims = 2500
+
+# Օժանդակ ֆունկցիա մեկ Մարկովի շղթա գեներացնելու համար
+def simulate_markov_chain(P, start, length):
+    path = np.zeros(length, dtype=int)
+    path[0] = start
+    for t in range(1, length):
+        path[t] = np.random.choice(n_states, p=P[path[t-1]])
+    return path
+
+# ԱՌԱՋԱԴՐԱՆՔ 1
+plt.figure(figsize=(15, 12))
+plt.suptitle("Առաջադրանք 1: Առաջին 5 սիմուլյացիաները (Երկարություն = 500, Սկիզբը՝ Critical վիճակից)", fontsize=16, y=0.98)
+
+for i in range(5):
+    path = simulate_markov_chain(P, start_state, length)
+    plt.subplot(5, 1, i + 1)
+    plt.step(range(length), path, where='mid', color='#2980b9', linewidth=1)
+    plt.yticks(range(n_states), states)
+    plt.ylabel(f"Սիմուլյացիա {i+1}", fontweight='bold')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.xlim(0, length)
+    if i == 4:
+        plt.xlabel("Քայլեր (Ժամանակ)")
+        
+plt.tight_layout()
+plt.show()
+
+# ԱՌԱՋԱԴՐԱՆՔ 2
+all_paths = np.zeros((n_sims, length), dtype=int)
+for i in range(n_sims):
+    all_paths[i] = simulate_markov_chain(P, start_state, length)
+
+unique, counts = np.unique(all_paths, return_counts=True)
+pi_empirical = counts / counts.sum()
+
+plt.figure(figsize=(10, 5))
+plt.bar(states, pi_empirical, color='#27ae60', alpha=0.8, edgecolor='black')
+plt.title("Առաջադրանք 2: Վիճակների էմպիրիկ մասնաբաժինները (2500 սիմուլյացիա x 500 քայլ)", fontsize=14)
+plt.ylabel("Հավանականության մասնաբաժին")
+plt.grid(axis='y', linestyle='--', alpha=0.5)
+plt.show()
+
+# ԱՌԱՋԱԴՐԱՆՔ 3
+
+# Մեթոդ 1: Սեփական արժեքների մեթոդ (Eigenvalue Method)
+eigenvalues, eigenvectors = np.linalg.eig(P.T)
+idx = np.argmin(np.abs(eigenvalues - 1.0))
+pi_eigen = np.real(eigenvectors[:, idx])
+pi_eigen = pi_eigen / np.sum(pi_eigen)
+
+# Մեթոդ 2: Գծային հավասարումների համակարգի լուծում (P^T - I)pi = 0
+A = P.T - np.eye(n_states)
+A[-1] = np.ones(n_states)
+b = np.zeros(n_states)
+b[-1] = 1.0
+pi_linear = np.linalg.solve(A, b)
+
+print("ԱՌԱՋԱԴՐԱՆՔ 3-Ի ՀԱՄԱՐ")
+print(f"{'Վիճակ':<10} | {'Էմպիրիկ (Task 2)':<16} | {'Սեփական արժեք':<15} | {'Գծային համակարգ':<15}")
+print("-" * 70)
+for i in range(n_states):
+    print(f"{states[i]:<10} | {pi_empirical[i]:<16.6f} | {pi_eigen[i]:<15.6f} | {pi_linear[i]:<15.6f}")
+
+x = np.arange(n_states)
+width = 0.25
+
+plt.figure(figsize=(12, 6))
+plt.bar(x - width, pi_empirical, width, label='Էմպիրիկ (Task 2)', color='#27ae60', edgecolor='black')
+plt.bar(x, pi_eigen, width, label='Մեթոդ 1: Սեփական արժեքներ', color='#2980b9', edgecolor='black')
+plt.bar(x + width, pi_linear, width, label='Մեթոդ 2: Գծային համակարգ', color='#f39c12', edgecolor='black')
+plt.xticks(x, states)
+plt.title("Առաջադրանք 3: Ստացիոնար բաշխման մեթոդների համեմատություն", fontsize=14)
+plt.ylabel("Հավանականություն")
+plt.legend()
+plt.grid(axis='y', linestyle='--', alpha=0.5)
+plt.show()
